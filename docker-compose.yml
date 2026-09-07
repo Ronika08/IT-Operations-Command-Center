@@ -1,0 +1,135 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: itopscc-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: itopscc
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  auth-service:
+    build: ./services/auth-service
+    container_name: auth-service
+    environment:
+      FAULT_INJECTION_TOKEN: ${FAULT_INJECTION_TOKEN:-dev-admin-token-change-me}
+    ports:
+      - "8001:8000"
+
+  orders-service:
+    build: ./services/orders-service
+    container_name: orders-service
+    environment:
+      FAULT_INJECTION_TOKEN: ${FAULT_INJECTION_TOKEN:-dev-admin-token-change-me}
+    ports:
+      - "8002:8000"
+
+  payments-service:
+    build: ./services/payments-service
+    container_name: payments-service
+    environment:
+      FAULT_INJECTION_TOKEN: ${FAULT_INJECTION_TOKEN:-dev-admin-token-change-me}
+    ports:
+      - "8003:8000"
+
+  db-proxy-service:
+    build: ./services/db-proxy-service
+    container_name: db-proxy-service
+    environment:
+      FAULT_INJECTION_TOKEN: ${FAULT_INJECTION_TOKEN:-dev-admin-token-change-me}
+    ports:
+      - "8004:8000"
+
+  central-platform:
+    build: ./central-platform
+    container_name: central-platform
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+      orders-service:
+        condition: service_started
+      payments-service:
+        condition: service_started
+      db-proxy-service:
+        condition: service_started
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/itopscc
+      AUTH_SERVICE_URL: http://auth-service:8000
+      ORDERS_SERVICE_URL: http://orders-service:8000
+      PAYMENTS_SERVICE_URL: http://payments-service:8000
+      DB_PROXY_SERVICE_URL: http://db-proxy-service:8000
+      PROMETHEUS_URL: http://prometheus:9090
+      ERROR_RATE_THRESHOLD: "0.10"
+      LATENCY_P95_THRESHOLD_SECONDS: "1.0"
+      AVAILABILITY_THRESHOLD: "0.99"
+      POLL_INTERVAL_SECONDS: "15"
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.6-flash}
+      LLM_ENABLED: "true"
+      CORS_ORIGINS: "*"
+      # Priority 4 (auth). JWT_SECRET_KEY MUST be overridden with a real
+      # secret outside local/demo use - see .env.example. The 4 seed
+      # passwords below default to obviously-fake placeholders (see
+      # core/config.py) if left unset; override them via a local .env
+      # (never committed) for anything beyond a personal demo.
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev-only-jwt-secret-change-me}
+      JWT_EXPIRE_MINUTES: ${JWT_EXPIRE_MINUTES:-480}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-changeme-admin}
+      SEED_IT_SUPPORT_PASSWORD: ${SEED_IT_SUPPORT_PASSWORD:-changeme-itsupport}
+      SEED_INCIDENT_MANAGER_PASSWORD: ${SEED_INCIDENT_MANAGER_PASSWORD:-changeme-incidentmgr}
+      SEED_RCA_REVIEWER_PASSWORD: ${SEED_RCA_REVIEWER_PASSWORD:-changeme-rcareviewer}
+    ports:
+      - "8000:8000"
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: prometheus
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on:
+      - auth-service
+      - orders-service
+      - payments-service
+      - db-proxy-service
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+
+  frontend:
+    image: nginx:1.27-alpine
+    container_name: itopscc-frontend
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+    ports:
+      - "8080:80"
+    depends_on:
+      - central-platform
+
+volumes:
+  pgdata:

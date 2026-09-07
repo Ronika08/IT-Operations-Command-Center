@@ -1,0 +1,409 @@
+{
+  "info": {
+    "name": "IT Operations Command Center",
+    "description": "Covers all 4 backend services and the Central Platform API, including negative/error cases.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "auth_url",
+      "value": "http://localhost:8001"
+    },
+    {
+      "key": "orders_url",
+      "value": "http://localhost:8002"
+    },
+    {
+      "key": "payments_url",
+      "value": "http://localhost:8003"
+    },
+    {
+      "key": "dbproxy_url",
+      "value": "http://localhost:8004"
+    },
+    {
+      "key": "central_url",
+      "value": "http://localhost:8000"
+    },
+    {
+      "key": "admin_token",
+      "value": "dev-admin-token-change-me",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth Service",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "url": "{{auth_url}}/health"
+          }
+        },
+        {
+          "name": "Login - valid credentials",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{auth_url}}/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\":\"admin\",\"password\":\"admin123\"}"
+            }
+          }
+        },
+        {
+          "name": "Login - invalid credentials (negative)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{auth_url}}/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\":\"admin\",\"password\":\"wrong\"}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status is 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Orders Service",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "url": "{{orders_url}}/health"
+          }
+        },
+        {
+          "name": "Create order - valid",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{orders_url}}/orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"customer\":\"acme\",\"item\":\"widget\",\"quantity\":3}"
+            }
+          }
+        },
+        {
+          "name": "Create order - invalid quantity (negative)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{orders_url}}/orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"customer\":\"acme\",\"item\":\"widget\",\"quantity\":-1}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status is 422', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get order - not found (negative)",
+          "request": {
+            "method": "GET",
+            "url": "{{orders_url}}/orders/999999"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status is 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Payments Service",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "url": "{{payments_url}}/health"
+          }
+        },
+        {
+          "name": "Create payment - valid",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{payments_url}}/payments",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"order_id\":1,\"amount\":250.50}"
+            }
+          }
+        },
+        {
+          "name": "Create payment - invalid amount (negative)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{payments_url}}/payments",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"order_id\":1,\"amount\":-5}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status is 422', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Inject errors (fault drill)",
+          "request": {
+            "method": "POST",
+            "url": "{{payments_url}}/admin/inject-errors?rate=1.0",
+            "header": [
+              {
+                "key": "X-Admin-Token",
+                "value": "{{admin_token}}",
+                "type": "text",
+                "description": "Required since the security audit - see docs/api_docs.md"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Reset faults",
+          "request": {
+            "method": "POST",
+            "url": "{{payments_url}}/admin/reset",
+            "header": [
+              {
+                "key": "X-Admin-Token",
+                "value": "{{admin_token}}",
+                "type": "text",
+                "description": "Required since the security audit - see docs/api_docs.md"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "DB Proxy Service",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "url": "{{dbproxy_url}}/health"
+          }
+        },
+        {
+          "name": "Create record - valid",
+          "request": {
+            "method": "POST",
+            "url": "{{dbproxy_url}}/records",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payload\": \"hello\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ]
+          }
+        },
+        {
+          "name": "List records",
+          "request": {
+            "method": "GET",
+            "url": "{{dbproxy_url}}/records"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Central Platform",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "url": "{{central_url}}/health"
+          }
+        },
+        {
+          "name": "List services",
+          "request": {
+            "method": "GET",
+            "url": "{{central_url}}/services"
+          }
+        },
+        {
+          "name": "List incidents",
+          "request": {
+            "method": "GET",
+            "url": "{{central_url}}/incidents"
+          }
+        },
+        {
+          "name": "Get incident - not found (negative)",
+          "request": {
+            "method": "GET",
+            "url": "{{central_url}}/incidents/999999"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status is 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "SLA rules",
+          "request": {
+            "method": "GET",
+            "url": "{{central_url}}/sla/rules"
+          }
+        },
+        {
+          "name": "SLA summary",
+          "request": {
+            "method": "GET",
+            "url": "{{central_url}}/sla/summary"
+          }
+        },
+        {
+          "name": "Poll service now (id=1)",
+          "request": {
+            "method": "POST",
+            "url": "{{central_url}}/services/1/poll-now"
+          }
+        },
+        {
+          "name": "Acknowledge incident (id=1)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{central_url}}/incidents/1/acknowledge",
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          }
+        },
+        {
+          "name": "Acknowledge already-acknowledged (negative)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{central_url}}/incidents/1/acknowledge",
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Run RCA on incident (id=1)",
+          "request": {
+            "method": "POST",
+            "url": "{{central_url}}/incidents/1/rca"
+          }
+        }
+      ]
+    }
+  ]
+}

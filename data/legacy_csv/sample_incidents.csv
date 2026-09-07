@@ -1,0 +1,13 @@
+service,title,severity,opened_at
+payments-service,Payment gateway timeout,critical,2026-08-20T09:15:00
+auth-service,Login latency spike,high,2026-08-20T10:02:00
+orders-service,Order creation slow,medium,2026-08-21T08:30:00
+payments-service,Payment gateway timeout,critical,2026-08-20T09:15:00
+db-proxy-service,Connection pool exhausted,high,2026-08-21T14:10:00
+orders-service,Duplicate order bug,severe,2026-08-22T11:00:00
+auth-service,,high,2026-08-22T12:00:00
+payments-service,Declined payments spike,medium,not-a-date
+db-proxy-service,Slow query on records table,low,2026-08-23T16:45:00
+auth-service,Login latency spike,high,2026-08-20T10:02:00
+orders-service,Stock sync failure,medium,2026-08-24T07:20:00
+,Missing service field,low,2026-08-24T09:00:00

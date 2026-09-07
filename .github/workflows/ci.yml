@@ -1,0 +1,82 @@
+name: CI
+
+# What this validates (see docs/testing.md for the full breakdown):
+#   1. The unit test suite (pure logic - rule engine, SLA math, auth,
+#      AI validator, recovery detection) - no external services needed.
+#   2. The integration test suite against a REAL, ephemeral Postgres
+#      service container - the same router -> DB -> response path a real
+#      deployment uses.
+#   3. That all 5 Docker images actually build.
+#
+# What this deliberately does NOT do: deploy anywhere. There is no
+# production environment for this project - see README.md and
+# docs/deployment.md. LLM_ENABLED is forced to "false" throughout so CI
+# never needs (or can leak) a real Gemini API key.
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: itopscc_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install central-platform dependencies
+        run: |
+          pip install -r central-platform/requirements.txt
+          pip install pytest pytest-asyncio
+
+      - name: Run unit tests
+        env:
+          DATABASE_URL: "sqlite:///:memory:"
+          LLM_ENABLED: "false"
+          JWT_SECRET_KEY: "ci-unit-test-secret-not-for-prod"
+        run: pytest tests/unit -v
+
+      - name: Run integration tests (real Postgres)
+        env:
+          DATABASE_URL: "postgresql+psycopg2://postgres:postgres@localhost:5432/itopscc_test"
+          LLM_ENABLED: "false"
+          JWT_SECRET_KEY: "ci-integration-test-secret-not-for-prod"
+        run: pytest tests/integration -v
+
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build central-platform image
+        run: docker build -t itopscc/central-platform:ci ./central-platform
+
+      - name: Build auth-service image
+        run: docker build -t itopscc/auth-service:ci ./services/auth-service
+
+      - name: Build orders-service image
+        run: docker build -t itopscc/orders-service:ci ./services/orders-service
+
+      - name: Build payments-service image
+        run: docker build -t itopscc/payments-service:ci ./services/payments-service
+
+      - name: Build db-proxy-service image
+        run: docker build -t itopscc/db-proxy-service:ci ./services/db-proxy-service

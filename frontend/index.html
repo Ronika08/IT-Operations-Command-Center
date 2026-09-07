@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>IT Operations Command Center</title>
+<link rel="stylesheet" href="css/style.css?v=5" />
+</head>
+<body>
+  <!--
+    Login overlay (Priority 4). Shown whenever there's no valid session
+    token; hidden by app.js once /auth/login succeeds or a saved token
+    from localStorage passes an /auth/me check. This is a real login
+    gating a real JWT-protected API - not a cosmetic form.
+  -->
+  <div id="login-overlay" class="login-overlay">
+    <form id="login-form" class="login-box">
+      <h2>IT Operations Command Center</h2>
+      <p class="muted">Sign in with one of the seeded demo accounts (see docs/security.md).</p>
+      <label for="login-username">Username</label>
+      <input id="login-username" type="text" autocomplete="username" placeholder="e.g. it_support" required />
+      <label for="login-password">Password</label>
+      <input id="login-password" type="password" autocomplete="current-password" required />
+      <button type="submit" class="action primary">Sign in</button>
+      <p id="login-error" class="login-error"></p>
+      <p class="muted login-hint">Demo usernames: admin, it_support, incident_manager, rca_reviewer (password set via SEED_*_PASSWORD env vars).</p>
+    </form>
+  </div>
+
+  <header class="topbar">
+    <h1>IT Operations Command Center</h1>
+    <div class="topbar-controls">
+      <label for="api-base">API base:</label>
+      <input id="api-base" type="text" value="http://localhost:8000" />
+      <span id="current-user-badge" class="current-user-badge"></span>
+      <button id="logout-btn" class="action">Logout</button>
+      <button id="refresh-btn">Refresh</button>
+    </div>
+  </header>
+
+  <main id="app-main">
+    <section class="summary-cards" id="summary-cards">
+      <div class="card"><span class="card-label">Total Incidents</span><span class="card-value" id="stat-total">-</span></div>
+      <div class="card"><span class="card-label">Currently Open</span><span class="card-value" id="stat-open">-</span></div>
+      <div class="card"><span class="card-label">SLA Breaches</span><span class="card-value" id="stat-breached">-</span></div>
+      <div class="card"><span class="card-label">SLA Compliance</span><span class="card-value" id="stat-compliance">-</span></div>
+    </section>
+
+    <section class="panel">
+      <h2>Services</h2>
+      <table id="services-table">
+        <thead><tr><th>Name</th><th>Base URL</th><th>Active</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <section class="panel sla-policy-panel">
+      <div class="sub-panel-header">
+        <h2>SLA Policy</h2>
+        <p class="placeholder-note">Read from the real <code>sla_rules</code> table via <code>GET /sla/rules</code> - this is the live policy new incidents actually use (see docs/architecture.md, "SLA policy is data-driven"). Editing requires the ADMIN role.</p>
+      </div>
+      <table id="sla-rules-table">
+        <thead><tr><th>Severity</th><th>Response (min)</th><th>Resolution (min)</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <section class="panel service-health-panel">
+      <h2>Service Health</h2>
+
+      <!-- Static pipeline legend (Requirement 18) - labels only, no data. -->
+      <div class="pipeline-flow" aria-hidden="true">
+        <span class="pipeline-step">Service</span><span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-step">Telemetry + Logs</span><span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-step">Metric Anomaly</span><span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-step">Incident</span><span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-step">RCA</span><span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-step">Recovery</span>
+      </div>
+
+      <div id="service-health-cards" class="service-health-cards">
+        <p class="placeholder-note">Loading service health...</p>
+      </div>
+
+      <div class="sub-panel service-metrics-panel">
+        <div class="sub-panel-header">
+          <h4>Recent Metric Samples</h4>
+          <div class="service-metrics-controls">
+            <select id="service-select">
+              <option value="">-- Select a service --</option>
+            </select>
+            <button id="poll-now-btn" class="action primary">Poll Now</button>
+          </div>
+        </div>
+        <div id="poll-result"></div>
+        <div id="service-metrics-body">
+          <p class="placeholder-note">Select a service above to view its recent real metric samples.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Incidents</h2>
+      <table id="incidents-table">
+        <thead>
+          <tr>
+            <th>ID</th><th>Service</th><th>Title</th><th>Severity</th><th>Status</th>
+            <th>Opened</th><th>Recovered</th><th>Response Due</th><th>Resolution Due</th><th>Breached</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div id="incidents-pagination" class="pagination-controls"></div>
+    </section>
+
+    <section class="panel investigation-panel">
+      <h2>Incident Investigation</h2>
+      <div id="incident-detail">
+        <p class="muted">Click an incident row to load its detail here.</p>
+      </div>
+    </section>
+
+    <section class="panel audit-trail-panel">
+      <div class="sub-panel-header">
+        <h2>Audit Trail</h2>
+        <button id="audit-refresh-btn" class="action">Refresh</button>
+      </div>
+      <p class="placeholder-note">Real records from <code>GET /audit-logs?limit=50</code> - every state-changing action (acknowledge, resolve, RCA verification, SLA change, auto-recovery) writes here, with the real authenticated user id, not a caller-supplied one. Newest first.</p>
+      <div id="audit-trail-body">
+        <p class="placeholder-note">Loading audit trail...</p>
+      </div>
+    </section>
+  </main>
+
+  <!--
+    Cache-busting: the query string (?v=N) is bumped whenever app.js or
+    style.css changes. Without it, browsers can keep serving an old
+    cached copy of these files indefinitely (nginx here serves the live
+    bind-mounted frontend/ folder with no explicit Cache-Control headers,
+    so browsers fall back to heuristic caching, which can be very
+    aggressive). Bump this number on every future JS/CSS edit.
+    (v=3: added the Service Health panel.)
+    (v=4: added the Audit Trail panel.)
+    (v=5: login/auth, SLA policy panel, pagination, recovery + AI
+     validation display - see CHANGELOG_IMPROVEMENTS.md.)
+  -->
+  <script src="js/app.js?v=5"></script>
+</body>
+</html>

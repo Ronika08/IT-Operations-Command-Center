@@ -1,0 +1,16 @@
+CSV Conversion Report - 2026-09-05T01:45:48.398056Z
+Total rows processed: 12
+Accepted: 6 | Rejected: 4 | Deduped: 2
+------------------------------------------------------------
+row 1: ACCEPTED
+row 2: ACCEPTED
+row 3: ACCEPTED
+row 4: DEDUPED - duplicate of an earlier row
+row 5: ACCEPTED
+row 6: REJECTED - invalid severity 'severe' (must be one of ['critical', 'high', 'low', 'medium'])
+row 7: REJECTED - missing required field(s): title
+row 8: REJECTED - unparsable opened_at timestamp 'not-a-date' (expected ISO 8601)
+row 9: ACCEPTED
+row 10: DEDUPED - duplicate of an earlier row
+row 11: ACCEPTED
+row 12: REJECTED - missing required field(s): service

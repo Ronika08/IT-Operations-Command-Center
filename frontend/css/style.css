@@ -1,0 +1,535 @@
+:root {
+  --bg: #0f1720;
+  --panel: #17202b;
+  --border: #2a3542;
+  --text: #e2e8f0;
+  --muted: #8896a6;
+  --critical: #e5484d;
+  --high: #f5a524;
+  --medium: #3b82f6;
+  --low: #64748b;
+  --ok: #22c55e;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+
+.topbar h1 { font-size: 18px; margin: 0; }
+
+.topbar-controls { display: flex; align-items: center; gap: 8px; }
+.topbar-controls input {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 6px 10px;
+  border-radius: 6px;
+  width: 220px;
+}
+.topbar-controls button {
+  background: var(--ok);
+  border: none;
+  color: #04220f;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+main { padding: 24px; max-width: 1100px; margin: 0 auto; }
+
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.card-label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+.card-value { font-size: 26px; font-weight: 700; }
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+.panel h2 { margin-top: 0; font-size: 15px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; }
+tr:hover td { background: rgba(255,255,255,0.03); cursor: pointer; }
+
+.badge { padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+.badge-critical { background: rgba(229,72,77,0.15); color: var(--critical); }
+.badge-high { background: rgba(245,165,36,0.15); color: var(--high); }
+.badge-medium { background: rgba(59,130,246,0.15); color: var(--medium); }
+.badge-low { background: rgba(100,116,139,0.15); color: var(--low); }
+.badge-breach { background: rgba(229,72,77,0.2); color: var(--critical); }
+.badge-ok { background: rgba(34,197,94,0.15); color: var(--ok); }
+
+button.action {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-size: 12px;
+  margin-right: 6px;
+}
+button.action:hover { border-color: var(--ok); }
+
+.muted { color: var(--muted); }
+
+.evidence-item {
+  border-left: 3px solid var(--medium);
+  padding: 6px 10px;
+  margin: 6px 0;
+  background: rgba(255,255,255,0.03);
+  font-size: 13px;
+}
+
+.ai-box {
+  background: rgba(59,130,246,0.08);
+  border: 1px solid rgba(59,130,246,0.3);
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 10px;
+  font-size: 13px;
+  white-space: pre-wrap;
+}
+
+/* ==========================================================================
+   Incident Investigation panel (Day 2 - Task 1)
+   Added without touching any of the rules above. Everything here is new.
+   ========================================================================== */
+
+.investigation-panel .investigation-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.investigation-panel .investigation-header h3 { margin: 0; font-size: 16px; }
+.investigation-panel .investigation-badges { display: flex; gap: 6px; align-items: center; }
+
+.badge-status { background: rgba(136,150,166,0.15); color: var(--text); }
+
+/* Key/value field grid - replaces a plain HTML table with a card-style
+   grid so the investigation panel reads like an operations dashboard
+   rather than a spreadsheet dump. Responsive: columns collapse
+   automatically as the viewport narrows. */
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.info-field {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.info-label {
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.info-value {
+  font-size: 14px;
+  font-weight: 600;
+  word-break: break-word;
+}
+.info-field.breach-field .info-value { display: flex; }
+
+/* Sub-panels (RCA, Human Verification) nested inside the investigation panel */
+.sub-panel {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  margin-top: 16px;
+  background: rgba(255,255,255,0.015);
+}
+.sub-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.sub-panel-header h4 {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+button.action.primary {
+  background: var(--medium);
+  border-color: var(--medium);
+  color: #fff;
+  font-weight: 600;
+}
+button.action.primary:hover { background: #2563eb; border-color: #2563eb; }
+button.action:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  border-color: var(--border);
+}
+button.action:disabled:hover { border-color: var(--border); }
+
+.badge-conf-high { background: rgba(34,197,94,0.15); color: var(--ok); }
+.badge-conf-medium { background: rgba(245,165,36,0.15); color: var(--high); }
+.badge-conf-low { background: rgba(229,72,77,0.15); color: var(--critical); }
+
+.badge-llm-yes { background: rgba(59,130,246,0.15); color: var(--medium); }
+.badge-llm-no { background: rgba(136,150,166,0.15); color: var(--muted); }
+
+/* Human Verification section - deliberately the most visually distinct
+   part of the panel, since a human explicitly confirming/rejecting an
+   AI-assisted conclusion is the safety-critical step in this workflow. */
+.verification-panel {
+  border-color: rgba(245,165,36,0.4);
+  background: rgba(245,165,36,0.04);
+}
+.verification-panel .sub-panel-header h4 { color: var(--high); }
+
+.verification-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+button.verify-btn {
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  color: #04220f;
+}
+button.verify-btn.accept { background: var(--ok); }
+button.verify-btn.reject { background: var(--critical); color: #2a0505; }
+button.verify-btn.modify { background: var(--high); color: #2a1a00; }
+button.verify-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+textarea#verify-note {
+  width: 100%;
+  min-height: 60px;
+  margin-top: 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: 13px;
+  resize: vertical;
+}
+
+.verification-result {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  background: rgba(34,197,94,0.08);
+  border: 1px solid rgba(34,197,94,0.3);
+  font-size: 13px;
+}
+.verification-result .info-grid { margin-bottom: 0; }
+
+.placeholder-note {
+  color: var(--muted);
+  font-size: 13px;
+  font-style: italic;
+}
+
+/* Responsive tweaks - narrow viewports (tablet/mobile) */
+@media (max-width: 720px) {
+  main { padding: 12px; }
+  .topbar { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .topbar-controls { width: 100%; }
+  .topbar-controls input { flex: 1; width: auto; }
+  .summary-cards { grid-template-columns: repeat(2, 1fr); }
+  .panel { overflow-x: auto; }
+  .sub-panel-header { flex-direction: column; align-items: flex-start; }
+  .verification-actions { flex-direction: column; }
+  button.verify-btn { width: 100%; }
+  .service-metrics-controls { flex-direction: column; align-items: stretch; }
+  .sparkline-grid { grid-template-columns: 1fr; }
+}
+
+/* ==========================================================================
+   Service Health panel (Day 2 - Task 2)
+   Added without touching any of the rules above. Everything here is new.
+   ========================================================================== */
+
+.pipeline-flow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255,255,255,0.02);
+}
+.pipeline-step {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  background: rgba(59,130,246,0.12);
+  border: 1px solid rgba(59,130,246,0.3);
+  border-radius: 999px;
+  padding: 4px 10px;
+  white-space: nowrap;
+}
+.pipeline-arrow {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.service-health-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.service-card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  background: rgba(255,255,255,0.02);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.service-card:hover { border-color: rgba(59,130,246,0.5); }
+.service-card.selected {
+  border-color: var(--medium);
+  background: rgba(59,130,246,0.06);
+}
+.service-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.service-card-name { font-weight: 700; font-size: 14px; }
+.service-metric-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  font-size: 13px;
+  border-top: 1px solid rgba(255,255,255,0.04);
+}
+.service-metric-row:first-of-type { border-top: none; }
+.service-metric-row .info-label { font-size: 11px; }
+
+.service-metrics-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+#service-select {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-family: inherit;
+  font-size: 13px;
+}
+
+table.metrics-table { margin-top: 4px; }
+
+.sparkline-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  margin-top: 16px;
+}
+.sparkline-block {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.015);
+}
+.sparkline-block .info-label { display: block; margin-bottom: 6px; }
+svg.sparkline {
+  width: 100%;
+  height: 40px;
+  display: block;
+}
+
+#poll-result:not(:empty) {
+  margin: 10px 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(59,130,246,0.06);
+  border: 1px solid rgba(59,130,246,0.25);
+  font-size: 13px;
+}
+
+/* ==========================================================================
+   Audit Trail panel (Task 4)
+   Added without touching any of the rules above. Everything here is new.
+   ========================================================================== */
+
+.audit-trail-panel .sub-panel-header { margin-bottom: 8px; }
+.audit-trail-panel .sub-panel-header h2 { margin: 0; }
+
+table.audit-table { font-size: 13px; }
+table.audit-table td.audit-details {
+  max-width: 320px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.badge-user-system {
+  background: rgba(136,150,166,0.15);
+  color: var(--muted);
+  font-style: italic;
+}
+.badge-action {
+  background: rgba(59,130,246,0.12);
+  color: var(--medium);
+  font-family: ui-monospace, "SF Mono", Consolas, monospace;
+  font-size: 12px;
+}
+.audit-target {
+  color: var(--muted);
+  font-size: 12px;
+}
+.audit-error {
+  color: var(--critical);
+  font-size: 13px;
+}
+
+/* ==========================================================================
+   Auth (Priority 4): login overlay + current-user badge
+   ========================================================================== */
+
+.hidden { display: none !important; }
+
+.login-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.login-box {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 28px 32px;
+  width: 340px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.login-box h2 { margin: 0 0 4px 0; font-size: 18px; }
+.login-box label { font-size: 12px; color: var(--muted); margin-top: 6px; }
+.login-box input {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 8px 10px;
+  border-radius: 6px;
+}
+.login-box button { margin-top: 12px; }
+.login-error { color: var(--critical); font-size: 13px; min-height: 16px; }
+.login-hint { font-size: 11px; }
+
+.current-user-badge {
+  color: var(--muted);
+  font-size: 13px;
+  margin-left: 12px;
+  margin-right: 4px;
+}
+
+/* ==========================================================================
+   Recovery detection (Priority 3) + AI validation (Priority 5) badges
+   ========================================================================== */
+
+.badge-recovered {
+  background: rgba(59,130,246,0.15);
+  color: var(--medium);
+}
+
+.badge-status {
+  background: rgba(136,150,166,0.15);
+  color: var(--text);
+}
+
+.ai-validation-reason {
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+/* ==========================================================================
+   Pagination (Priority 6) + SLA policy panel
+   ========================================================================== */
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  font-size: 13px;
+}
+
+.pagination-controls button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.sla-policy-panel .sub-panel-header { margin-bottom: 8px; }
+.sla-input {
+  width: 80px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 4px 6px;
+  border-radius: 4px;
+}
