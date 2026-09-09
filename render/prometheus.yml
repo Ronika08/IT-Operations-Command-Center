@@ -1,0 +1,32 @@
+global:
+  scrape_interval: 10s
+  evaluation_interval: 10s
+
+scrape_configs:
+  - job_name: "auth-service"
+    static_configs:
+      - targets: ["127.0.0.1:8001"]
+        labels:
+          service: "auth-service"
+
+  - job_name: "orders-service"
+    static_configs:
+      - targets: ["127.0.0.1:8002"]
+        labels:
+          service: "orders-service"
+
+  - job_name: "payments-service"
+    static_configs:
+      - targets: ["127.0.0.1:8003"]
+        labels:
+          service: "payments-service"
+
+  - job_name: "db-proxy-service"
+    static_configs:
+      - targets: ["127.0.0.1:8004"]
+        labels:
+          service: "db-proxy-service"
+
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["127.0.0.1:9090"]
